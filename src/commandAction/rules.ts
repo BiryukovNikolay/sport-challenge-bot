@@ -9,7 +9,7 @@ export function onRules(msg: TelegramBot.Message, bot: TelegramBot) {
     const currentProgram = programs.find((program) => program.id === activeChallenge.programId);
 
     if (currentProgram) {
-      bot.sendMessage(chatId, currentProgram.rules);
+      bot.sendMessage(chatId, currentProgram.rules, { disable_notification: true });
 
       return;
     }

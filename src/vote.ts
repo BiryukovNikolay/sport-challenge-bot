@@ -1,5 +1,5 @@
 import TelegramBot from "node-telegram-bot-api";
-import { ChallengeType } from "./types";
+import { ChallengeType, Status } from "./types";
 
 type VoteType = {
   bot: TelegramBot;
@@ -12,11 +12,19 @@ export function voteChallengeDeclined({ bot, challenge, callbackQuery, chatId }:
   const declinedUser = challenge.userOut.find((user) => user.id === callbackQuery.from.id);
   const index = challenge.usersIn.findIndex((user) => user.id === callbackQuery.from.id);
 
+  if (challenge.status !== Status.Vote) {
+    bot.answerCallbackQuery(callbackQuery.id, { text: 'Поздняк, соревнование уже идет' })
+    bot.deleteMessage(chatId!, callbackQuery.message?.message_id!);
+
+    return;
+  }
+
   if (!declinedUser) {
     challenge.userOut.push(callbackQuery.from);
 
     bot.sendMessage(chatId!,
       `@${callbackQuery?.from?.username}  Соскочил!`,
+      { disable_notification: true },
     );
 
     if (index !== -1) {
@@ -36,11 +44,19 @@ export function voteChallengeAccepted({ bot, challenge, callbackQuery, chatId }:
   const activeUser = challenge.usersIn.find((user) => user.id === callbackQuery.from.id);
   const declinedUserIndex = challenge.userOut.findIndex((user) => user.id === callbackQuery.from.id);
 
+  if (challenge.status !== Status.Vote) {
+    bot.answerCallbackQuery(callbackQuery.id, { text: 'Поздняк, соревнование уже идет' })
+    bot.deleteMessage(chatId!, callbackQuery.message?.message_id!);
+
+    return;
+  }
+
   if (!activeUser) {
     challenge.usersIn.push(callbackQuery.from);
 
     bot.sendMessage(chatId!,
       `@${callbackQuery?.from?.username}  Принял вызов!`,
+      { disable_notification: true },
     );
 
     if (declinedUserIndex !== -1) {

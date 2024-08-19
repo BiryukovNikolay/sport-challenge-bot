@@ -31,7 +31,8 @@ export function onStart(msg: TelegramBot.Message, bot: TelegramBot) {
           inline_keyboard: PROGRESS_PROGRAM_KEYBOARD,
           selective: true,
           one_time_keyboard: true,
-        }
+        },
+        disable_notification: true,
       });
 
       return;
@@ -43,6 +44,6 @@ export function onStart(msg: TelegramBot.Message, bot: TelegramBot) {
       inline_keyboard: PROGRAMS_KEYBOARD,
       selective: true,
     },
-    reply_to_message_id: messageId,
+    disable_notification: true,
   });
 }

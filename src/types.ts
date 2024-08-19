@@ -27,6 +27,8 @@ export enum CallbackData {
   WaitProgram = 'wait_program',
   ContinueProgram = 'continue_program',
   CancelProgram = 'cancel_program',
+  BackToPrograms = 'back_to_programs',
+  StartVoting = 'start_voting',
 }
 
 export type Participant = TelegramBot.User & {
@@ -53,6 +55,7 @@ export type ChatType = {
   id: number;
   archive: ChallengeType[];
   activeChallenge?: ChallengeType;
+  preselectedProgram?: string;
 }
 
 

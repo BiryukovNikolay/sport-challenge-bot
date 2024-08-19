@@ -49,6 +49,8 @@ export type ChallengeType = {
   usersIn: TelegramBot.User[];
   userOut: TelegramBot.User[];
   status: Status;
+  activeDay?: number;
+  startDate?: Date;
 }
 
 export type ChatType = {

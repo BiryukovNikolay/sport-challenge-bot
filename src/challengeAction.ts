@@ -39,6 +39,11 @@ export function startChallenge(chatId: number, bot: TelegramBot) {
     if (currentChallenge && currentProgram) {
       currentChallenge.status = Status.Active;
       currentChallenge.participants = currentChallenge.usersIn.map((user) => ({...user, penalty: 0, activeDay: 1}));
+      currentChallenge.activeDay = 1;
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      currentChallenge.startDate = tomorrow;
 
       bot.sendMessage(chatId, `*Соревнование началось!*\n
       Приветсвуйте смельчаков: ${currentChallenge.participants.map((user) => `@${user.username}`).join('\n')}\n

@@ -29,6 +29,7 @@ export enum CallbackData {
   CancelProgram = 'cancel_program',
   BackToPrograms = 'back_to_programs',
   StartVoting = 'start_voting',
+  TimeZone = 'timezone',
 }
 
 export type Participant = TelegramBot.User & {

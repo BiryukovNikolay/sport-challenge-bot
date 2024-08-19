@@ -2,7 +2,7 @@ import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
 import { CallbackData, Status } from "./types";
 import { voteChallengeAccepted, voteChallengeDeclined } from "./vote";
 import { programs, challenges } from "./data";
-import { cancelChallenge, createChallenge, preselectProgram, startChallenge } from "./challengeAction";
+import { cancelChallenge, createChallenge, preselectProgram, setParticipantTimeZone, startChallenge } from "./challengeAction";
 
 type SetProgramType = {
   bot: TelegramBot;
@@ -72,7 +72,6 @@ export function programInfo({ programId, chatId, bot, messageId}: SetProgramType
   }
 }
 
-
 export function setCallbackQueryListener(bot: TelegramBot) {
   bot.on('callback_query', async (callbackQuery) => {
     const message = callbackQuery.message;
@@ -82,7 +81,6 @@ export function setCallbackQueryListener(bot: TelegramBot) {
     if (callbackQuery.data?.startsWith('chosen_program_')) {
       const programId = callbackQuery.data.replace('chosen_program_', '');
       programInfo({ programId, messageId: message?.message_id, bot, chatId: chatId! });
-      // setFirstProgram({ programId, chatId: chatId!, bot });
     }
 
     if (callbackQuery.data === CallbackData.BackToPrograms) {
@@ -140,6 +138,10 @@ export function setCallbackQueryListener(bot: TelegramBot) {
         { text: `Продолжаем!`},
       );
       bot.deleteMessage(chatId!, message?.message_id!);
+    }
+
+    if (callbackQuery.data?.startsWith(CallbackData.TimeZone)) {
+      setParticipantTimeZone({ chatId: chatId!, callbackQuery, bot });
     }
 
     bot.answerCallbackQuery(callbackQuery.id);

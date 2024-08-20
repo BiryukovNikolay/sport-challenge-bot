@@ -19,19 +19,19 @@ type CreateTaskType = {
 }
 
 const NotificationFirst: NotificationType = {
-  time: '22:15',
+  time: '20:00',
   message: 'Время выполнить упражнение',
   deadline: false,
 }
 
 const NotificationSecond: NotificationType = {
-  time: '22:18',
+  time: '23:00',
   message: 'Ну чего там? Остался час, все ждут!',
   deadline: false,
 }
 
 const NotificationLast: NotificationType = {
-  time: '22:20',
+  time: '00:00',
   message: 'Это фиаско! Записываем тебе в список лузеров, готовьте денежки',
   penaltyMessage: 'Время вышло, штрафной бал тебе! Придется сперва сделать сегодняшнее задание',
   deadline: true,
@@ -64,7 +64,8 @@ function createTask({ bot, participant, challenge, program, notification}: Creat
 
     if (penaltyMessage && !participant.penalty) {
       participant.penalty = 1;
-      bot.sendMessage(chatId,
+      bot.sendMessage(
+        chatId,
         `@${participant.username}, ${penaltyMessage} \n*${currentExercise}*`,
         { parse_mode: 'Markdown' },
       );
@@ -75,7 +76,8 @@ function createTask({ bot, participant, challenge, program, notification}: Creat
     if (currentExercise) {
       const exerciseMessage = deadline ? '' : `\n*${currentExercise}*`;
 
-      bot.sendMessage(chatId,
+      bot.sendMessage(
+        chatId,
         `@${participant.username}, ${message} ${exerciseMessage}`,
         { parse_mode: 'Markdown' },
       );

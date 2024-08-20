@@ -1,12 +1,13 @@
 import TelegramBot from "node-telegram-bot-api";
-import { programs, challenges } from "../data";
+import { challenges } from "../data";
+import { getProgram } from "../helpers";
 
 export function onRules(msg: TelegramBot.Message, bot: TelegramBot) {
   const chatId = msg.chat.id;
   const activeChallenge = challenges[chatId]?.activeChallenge;
 
   if (activeChallenge) {
-    const currentProgram = programs.find((program) => program.id === activeChallenge.programId);
+    const currentProgram = getProgram(activeChallenge.programId);
 
     if (currentProgram) {
       bot.sendMessage(chatId, currentProgram.rules, { disable_notification: true });

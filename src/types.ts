@@ -38,6 +38,7 @@ export type Participant = TelegramBot.User & {
   out?: boolean;
   outDateNumber?: number;
   timezone?: string;
+  winner?: boolean;
 };
 
 export type ChallengeType = {

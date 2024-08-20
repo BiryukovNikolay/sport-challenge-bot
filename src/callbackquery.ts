@@ -1,76 +1,14 @@
-import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
-import { CallbackData, Status } from "./types";
+import TelegramBot from "node-telegram-bot-api";
+import { CallbackData } from "./types";
 import { voteChallengeAccepted, voteChallengeDeclined } from "./vote";
 import { programs, challenges } from "./data";
-import { cancelChallenge, createChallenge, preselectProgram, setParticipantTimeZone, startChallenge } from "./challengeAction";
-
-type SetProgramType = {
-  bot: TelegramBot;
-  programId: string;
-  chatId: number;
-  messageId?: number;
-}
-
-const startChallengeKeyboard: InlineKeyboardButton[][] = [
-  [{ text: 'Я участвую', callback_data: CallbackData.ChallengeAccepted, }],
-  [{ text: 'Не участвую', callback_data: CallbackData.ChallengeDeclined, }],
-];
-
-type SetFirstProgram = {
-  chatId: number;
-  bot: TelegramBot;
-}
-
-function setFirstProgram({ chatId, bot}: SetProgramType) {
-    const chat = challenges[chatId];
-    const program = chat && programs.find((program) => program.id === chat.preselectedProgram);
-
-    if (program) {
-      createChallenge({
-        chatId: chatId!,
-        status: Status.Vote,
-        participants: [],
-      })
-
-      bot.sendMessage(chatId!,
-        `Вы выбрали программу: *${program.title}!*\nКто готов учавствовать?\nКак только все участники проголосуют, введите команду /startprogram`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: startChallengeKeyboard,
-            selective: true,
-          }
-        }
-      );
-    }
-}
-
-const programInfoKeyboard: InlineKeyboardButton[][] = [
-  [{ text: 'Стартуем', callback_data: CallbackData.StartVoting, }],
-  [{ text: 'Назад', callback_data: CallbackData.BackToPrograms, }],
-];
-
-
-export function programInfo({ programId, chatId, bot, messageId}: SetProgramType) {
-  const program = programs.find((program) => program.id === programId);
-
-  if (program && messageId) {
-    preselectProgram(chatId!, programId);
-
-    bot.editMessageText(
-      `${program.title}
-       ${'\n'}${program.schedule.map((day) => `*День ${day.day}:* ${day.exercise}`).join('\n')}`,
-      {
-        message_id: messageId,
-        chat_id: chatId,
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: programInfoKeyboard,
-        }
-      }
-    );
-  }
-}
+import {
+  cancelChallenge,
+  getProgramInfo,
+  setFirstProgram,
+  setParticipantTimeZone,
+  startChallenge
+} from "./challengeAction";
 
 export function setCallbackQueryListener(bot: TelegramBot) {
   bot.on('callback_query', async (callbackQuery) => {
@@ -80,7 +18,7 @@ export function setCallbackQueryListener(bot: TelegramBot) {
 
     if (callbackQuery.data?.startsWith('chosen_program_')) {
       const programId = callbackQuery.data.replace('chosen_program_', '');
-      programInfo({ programId, messageId: message?.message_id, bot, chatId: chatId! });
+      getProgramInfo({ programId, messageId: message?.message_id, bot, chatId: chatId! });
     }
 
     if (callbackQuery.data === CallbackData.BackToPrograms) {
@@ -96,7 +34,7 @@ export function setCallbackQueryListener(bot: TelegramBot) {
     }
 
     if (callbackQuery.data === CallbackData.StartVoting) {
-      setFirstProgram({ programId: challenges[chatId!].preselectedProgram!, chatId: chatId!, bot });
+      setFirstProgram({ chatId: chatId!, bot });
       bot.deleteMessage(chatId!, message?.message_id!);
     }
 

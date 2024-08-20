@@ -17,8 +17,12 @@
     "dotenv": "^16.4.5",
     "moment-timezone": "^0.5.45",
     "nanoid": "^5.0.7",
+    "node-cron": "^3.0.3",
     "node-telegram-bot-api": "^0.66.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
+  },
+  "devDependencies": {
+    "@types/node-cron": "^3.0.11"
   }
 }

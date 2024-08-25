@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { challenges } from "../data";
 import { ProgramType } from "../types";
-import { getProgram } from "../helpers";
+import { getProgram, sendTemporaryMessage } from "../helpers";
 
 function formatSchedule(program: ProgramType, activeDay: number, startDate: Date): string {
   return program.schedule.map(({day, exercise}) => {
@@ -31,14 +31,12 @@ export function onSchedule(msg: TelegramBot.Message, bot: TelegramBot) {
     const program = getProgram(activeChallenge.programId);
 
     if (program) {
-      bot.sendMessage(
+      sendTemporaryMessage({
+        bot,
         chatId,
-        formatSchedule(program, activeChallenge.activeDay, activeChallenge.startDate),
-        { disable_notification: true, parse_mode: 'HTML' }
-      ).then((sentMessage) => {
-        setTimeout(() => {
-          bot.deleteMessage(chatId, sentMessage.message_id)
-        }, 60000);
+        text: formatSchedule(program, activeChallenge.activeDay, activeChallenge.startDate),
+        delay: 60000,
+        options: { parse_mode: 'HTML' }
       });
 
       return;

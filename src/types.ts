@@ -19,7 +19,6 @@ export type ProgramType = {
   schedule: ScheduleType[]
 }
 
-
 export enum CallbackData {
   ChallengeDeclined = 'challenge_declined',
   ChallengeAccepted = 'challenge_accepted',
@@ -30,6 +29,8 @@ export enum CallbackData {
   BackToPrograms = 'back_to_programs',
   StartVoting = 'start_voting',
   TimeZone = 'timezone',
+  UserDone = 'user_done',
+  UserNotDone = 'user_not_done',
 }
 
 export type Participant = TelegramBot.User & {

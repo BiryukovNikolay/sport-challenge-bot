@@ -1,14 +1,16 @@
+export const DEFAULT_DELETE_TIMEOUT = 10 * 1000;
+
 export const COMMAND = {
   START: /\/start/,
   START_PROGRAM: /\/start-program/,
   RULES: /\/rules/,
   SCHEDULE: /\/schedule/,
+  CHECK_ME: /\/check_me/,
 }
-
 
 export const TIME_ZONES = [
   'Europe/Kaliningrad',   // MSK-1
-  'Europe/Moscow',     // MSK+0
+  'Europe/Moscow',        // MSK+0
   'Asia/Yekaterinburg',   // YEKT (MSK+2)
   'Asia/Omsk',            // OMST (MSK+3)
   'Asia/Krasnoyarsk',     // KRAT (MSK+4)

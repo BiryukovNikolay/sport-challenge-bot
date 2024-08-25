@@ -1,6 +1,6 @@
 import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
 import { CallbackData, Participant, Status } from "./types";
-import { programs, challenges } from "./data";
+import { challenges } from "./data";
 import { getKey, getProgram, getTimezoneKeyboard } from "./helpers";
 import { scheduleNotification } from "./reminder";
 
@@ -192,6 +192,35 @@ export async function setParticipantTimeZone({ chatId, callbackQuery, bot }: Set
     scheduleNotification(bot, challenge);
 
     bot.deleteMessage(chatId, callbackQuery.message?.message_id!);
+  }
+}
+
+export function setDayDone(chatId: number, userId: number) {
+  const currentChallenge = challenges[chatId]?.activeChallenge;
+  const currentProgram = currentChallenge && getProgram(currentChallenge.programId);
+
+  if (currentProgram) {
+    const user = currentChallenge.participants.find((user) => user.id === userId);
+
+    if (user) {
+      if (currentProgram.schedule.at(-1)?.day === user?.activeDay) {
+        user.activeDay = user.activeDay! + 1;
+        user.winner = true;
+        user.out = false;
+        user.outDateNumber = user.activeDay;
+        user.penalty = 0;
+
+        currentChallenge.winners.push(user);
+        currentChallenge.losers = currentChallenge.losers.filter((loser) => loser.id !== user.id);
+
+        return;
+      }
+
+      console.log(user.activeDay, user.activeDay! + 1, 'user.activeDay NEW');
+
+
+      user.activeDay = user.activeDay! + 1;
+    }
   }
 }
 

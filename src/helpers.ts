@@ -1,8 +1,16 @@
 import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
 import moment from "moment-timezone";
-import { TIME_ZONES } from "./constants";
+import { DEFAULT_DELETE_TIMEOUT, TIME_ZONES } from "./constants";
 import { CallbackData } from "./types";
 import { programs } from "./data";
+
+type MessageTemporaryType = {
+  bot: TelegramBot;
+  chatId: number;
+  text: string;
+  delay?: number;
+  options?: TelegramBot.SendMessageOptions;
+}
 
 export function getKey() {
   return Math.random().toString(36).substring(7);
@@ -35,5 +43,20 @@ export function getTimezoneKeyboard(): InlineKeyboardButton[][] {
 
 export function getProgram(programId: string) {
   return programs.find((program) => program.id === programId);
+}
+
+export function sendTemporaryMessage({
+  bot,
+  chatId,
+  text,
+  options,
+  delay = DEFAULT_DELETE_TIMEOUT
+}: MessageTemporaryType) {
+  bot.sendMessage(chatId, text, { disable_notification: true, ...options })
+     .then((sentMessage) => {
+        setTimeout(() => {
+          bot.deleteMessage(chatId, sentMessage.message_id)
+        }, delay);
+      });
 }
 

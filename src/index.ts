@@ -3,8 +3,13 @@ import dotenv from 'dotenv';
 import { setCallbackQueryListener } from './callbackquery';
 import { setCommandListener } from './helpers';
 import { COMMAND } from './constants';
-import { onRules, onStart, onStartProgram } from './commandAction';
-import { onSchedule } from './commandAction/schedule';
+import {
+  onRules,
+  onStart,
+  onStartProgram,
+  onCheckMe,
+  onSchedule
+} from './commandAction';
 
 dotenv.config();
 
@@ -15,6 +20,8 @@ setCommandListener(bot, COMMAND.START, onStart);
 setCommandListener(bot, COMMAND.START_PROGRAM, onStartProgram);
 setCommandListener(bot, COMMAND.RULES, onRules);
 setCommandListener(bot, COMMAND.SCHEDULE, onSchedule);
+setCommandListener(bot, COMMAND.CHECK_ME, onCheckMe);
+
 setCallbackQueryListener(bot);
 
 console.log('Бот запущен...');

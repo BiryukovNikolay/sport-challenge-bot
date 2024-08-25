@@ -1,5 +1,5 @@
 import TelegramBot from "node-telegram-bot-api";
-import { CallbackData } from "./types";
+import { CallbackData, ChallengeType } from "./types";
 import { voteChallengeAccepted, voteChallengeDeclined } from "./vote";
 import { programs, challenges } from "./data";
 import {
@@ -9,12 +9,13 @@ import {
   setParticipantTimeZone,
   startChallenge
 } from "./challengeAction";
+import { checkAction } from "./checkAction";
 
 export function setCallbackQueryListener(bot: TelegramBot) {
   bot.on('callback_query', async (callbackQuery) => {
     const message = callbackQuery.message;
     const chatId = message?.chat.id;
-    const challenge =  chatId && challenges[chatId]?.activeChallenge;
+    const challenge =  (chatId && challenges[chatId]?.activeChallenge) as ChallengeType;
 
     if (callbackQuery.data?.startsWith('chosen_program_')) {
       const programId = callbackQuery.data.replace('chosen_program_', '');
@@ -76,6 +77,18 @@ export function setCallbackQueryListener(bot: TelegramBot) {
         { text: `Продолжаем!`},
       );
       bot.deleteMessage(chatId!, message?.message_id!);
+    }
+
+    if (callbackQuery.data?.startsWith(CallbackData.UserDone)) {
+      checkAction({ bot, callbackQuery, type: CallbackData.UserDone });
+
+      return;
+    }
+
+    if (callbackQuery.data?.startsWith(CallbackData.UserNotDone)) {
+      checkAction({ bot, callbackQuery, type: CallbackData.UserNotDone });
+
+      return;
     }
 
     if (callbackQuery.data?.startsWith(CallbackData.TimeZone)) {

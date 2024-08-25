@@ -46,27 +46,28 @@ function getCroneExpression(time: string) {
 function createTask({ bot, participant, challenge, program, notification}: CreateTaskType) {
   const { time, message, penaltyMessage, deadline } = notification;
   const { activeDay, chatId } = challenge;
+  const { timezone, penalty, out, winner, username, activeDay: userDay} = participant;
   const lastDay = program.schedule[program.schedule.length - 1].day;
 
   const task = crone.schedule(getCroneExpression(time), () => {
-    if (participant.out || participant.winner || lastDay < activeDay!) {
+    if (out || winner || lastDay < activeDay!) {
       task.stop();
       return;
     }
 
-    if (participant.activeDay > activeDay!) {
+    if (userDay > activeDay!) {
       return;
     }
 
-    const participantDay = activeDay === participant.activeDay ? activeDay : participant.activeDay;
+    const participantDay = activeDay === userDay ? activeDay : userDay;
     const currentDay = program.schedule.find((day) => day.day === participantDay);
     const currentExercise = currentDay?.exercise;
 
-    if (penaltyMessage && !participant.penalty) {
+    if (deadline && penaltyMessage && !penalty) {
       participant.penalty = 1;
       bot.sendMessage(
         chatId,
-        `@${participant.username}, ${penaltyMessage} \n*${currentExercise}*`,
+        `@${username}, ${penaltyMessage} \n*${currentExercise}*`,
         { parse_mode: 'Markdown' },
       );
 
@@ -78,21 +79,21 @@ function createTask({ bot, participant, challenge, program, notification}: Creat
 
       bot.sendMessage(
         chatId,
-        `@${participant.username}, ${message} ${exerciseMessage}`,
+        `@${username}, ${message} ${exerciseMessage}`,
         { parse_mode: 'Markdown' },
       );
 
       if (deadline) {
         participant.out = true;
         participant.winner = false;
-        participant.outDateNumber = participant.activeDay;
+        participant.outDateNumber = userDay;
 
         task.stop();
       }
     }
   }, {
     scheduled: true,
-    timezone: participant.timezone,
+    timezone: timezone,
   });
 }
 

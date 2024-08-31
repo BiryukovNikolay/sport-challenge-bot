@@ -190,7 +190,6 @@ export async function setParticipantTimeZone({ chatId, callbackQuery, bot }: Set
     );
 
     scheduleNotification(bot, challenge);
-
     bot.deleteMessage(chatId, callbackQuery.message?.message_id!);
   }
 }
@@ -216,10 +215,48 @@ export function setDayDone(chatId: number, userId: number) {
         return;
       }
 
-      console.log(user.activeDay, user.activeDay! + 1, 'user.activeDay NEW');
-
-
       user.activeDay = user.activeDay! + 1;
+    }
+  }
+}
+
+export function setNewDay(chatId: number): string | undefined {
+  const currentChallenge = challenges[chatId]?.activeChallenge;
+  const currentProgram = currentChallenge && getProgram(currentChallenge.programId);
+
+  if (currentChallenge) {
+    currentChallenge.activeDay = currentChallenge.activeDay! + 1;
+
+    if (currentProgram) {
+      const nextExercise = currentProgram.schedule[currentChallenge.activeDay].exercise;
+
+      return nextExercise;
+    }
+  }
+}
+
+export function setParticipantPenalty(chatId: number, userId: number) {
+  const currentChallenge = challenges[chatId]?.activeChallenge;
+
+  if (currentChallenge) {
+    const user = currentChallenge.participants.find((user) => user.id === userId);
+
+    if (user) {
+      user.penalty = 1;
+    }
+  }
+}
+
+export function setParticipantOut(chatId: number, userId: number) {
+  const currentChallenge = challenges[chatId]?.activeChallenge;
+
+  if (currentChallenge) {
+    const user = currentChallenge.participants.find((user) => user.id === userId);
+
+    if (user) {
+      user.out = true;
+      user.winner = false;
+      user.outDateNumber = user.activeDay;
     }
   }
 }

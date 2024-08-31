@@ -19,7 +19,37 @@ export function onCheckMe(msg: TelegramBot.Message, bot: TelegramBot) {
 
   if (activeChallenge) {
     const participant = activeChallenge.participants.find((user: Participant) => user.id === userId);
-    const currentProgram = getProgram(activeChallenge.programId);
+
+    if (!participant) {
+      sendTemporaryMessage({
+        bot,
+        chatId,
+        text: `@${username} Ты не участвуешь в соревновании.`
+      });
+
+      return;
+    }
+
+    if (participant?.out) {
+      sendTemporaryMessage({
+        bot,
+        chatId,
+        text: `@${username} Ты выбыл из соревнования. Ho хорошая попытка!`
+      });
+
+      return;
+    }
+
+    if (participant?.winner) {
+      sendTemporaryMessage({
+        bot,
+        chatId,
+        text: `@${username} Ты уже выйграл, отдыхай!`
+      });
+
+      return;
+    }
+
     const isFalseStart = activeChallenge.startDate!.getDate() > new Date().getDate();
 
     if (isFalseStart) {
@@ -43,6 +73,8 @@ export function onCheckMe(msg: TelegramBot.Message, bot: TelegramBot) {
 
       return
     }
+
+    const currentProgram = getProgram(activeChallenge.programId);
 
     if (currentProgram && username) {
       bot.sendMessage(chatId, `@${username} Готов сдавать свою попытку. Ну что принимаем?`,

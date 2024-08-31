@@ -7,18 +7,6 @@ export enum Status {
   Canceled = 'canceled',
 }
 
-export type ScheduleType = {
-  day: number,
-  exercise: string
-}
-
-export type ProgramType = {
-  id: string,
-  title: string,
-  rules: string,
-  schedule: ScheduleType[]
-}
-
 export enum CallbackData {
   ChallengeDeclined = 'challenge_declined',
   ChallengeAccepted = 'challenge_accepted',
@@ -31,6 +19,18 @@ export enum CallbackData {
   TimeZone = 'timezone',
   UserDone = 'user_done',
   UserNotDone = 'user_not_done',
+}
+
+export type ScheduleType = {
+  day: number,
+  exercise: string
+}
+
+export type ProgramType = {
+  id: string,
+  title: string,
+  rules: string,
+  schedule: ScheduleType[]
 }
 
 export type Participant = TelegramBot.User & {

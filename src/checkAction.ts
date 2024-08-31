@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import { CallbackData, ChallengeType } from "./types";
-import { setDayDone } from "./challengeAction";
+import { setDayDone, setNewDay } from "./challengeAction";
 import { challenges } from "./data";
 
 type DoneActionType = {
@@ -59,8 +59,18 @@ export function checkAction({ bot, callbackQuery, type }: DoneActionType) {
 
     if (type === CallbackData.UserDone) {
       setDayDone(chatId!, participant.id!);
-    }
+      const isEveryOneDone = challenge?.participants.every((user) => user.activeDay! > challenge.activeDay!);
 
+      if (isEveryOneDone) {
+        const nextExercise = setNewDay(chatId!);
+
+        bot.sendMessage(
+          chatId!,
+          `Все участники выполнили задание. Переходим к следующему дню!\nЗадание на завтра: \n${nextExercise}`,
+          { disable_notification: true }
+        );
+      }
+    }
   }
 
   bot.answerCallbackQuery(callbackQuery.id);

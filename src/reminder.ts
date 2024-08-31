@@ -2,6 +2,7 @@ import TelegramBot from "node-telegram-bot-api";
 import crone from "node-cron";
 import { ChallengeType, Participant, ProgramType } from "./types";
 import { getProgram } from "./helpers";
+import { setParticipantOut, setParticipantPenalty } from "./challengeAction";
 
 type NotificationType = {
   time: string;
@@ -37,6 +38,12 @@ const NotificationLast: NotificationType = {
   deadline: true,
 }
 
+function getDelayUntilTomorrow(): number {
+  const now = new Date();
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+  return tomorrow.getTime() - now.getTime();
+}
+
 function getCroneExpression(time: string) {
   const [hours, minutes] = time.split(':');
 
@@ -64,7 +71,7 @@ function createTask({ bot, participant, challenge, program, notification}: Creat
     const currentExercise = currentDay?.exercise;
 
     if (deadline && penaltyMessage && !penalty) {
-      participant.penalty = 1;
+      setParticipantPenalty(chatId, participant.id);
       bot.sendMessage(
         chatId,
         `@${username}, ${penaltyMessage} \n*${currentExercise}*`,
@@ -84,10 +91,7 @@ function createTask({ bot, participant, challenge, program, notification}: Creat
       );
 
       if (deadline) {
-        participant.out = true;
-        participant.winner = false;
-        participant.outDateNumber = userDay;
-
+        setParticipantOut(chatId, participant.id);
         task.stop();
       }
     }
@@ -104,10 +108,13 @@ export function scheduleNotification(bot: TelegramBot, challenge: ChallengeType)
     return;
   }
 
-  // TODO add delay before next day
-  challenge.participants.forEach((participant) => {
-    createTask({ bot, participant, challenge, program, notification: NotificationFirst });
-    createTask({ bot, participant, challenge, program, notification: NotificationSecond });
-    createTask({ bot, participant, challenge, program, notification: NotificationLast });
-  });
+  const delay = getDelayUntilTomorrow();
+
+  setTimeout(() => {
+    challenge.participants.forEach((participant) => {
+      createTask({ bot, participant, challenge, program, notification: NotificationFirst });
+      createTask({ bot, participant, challenge, program, notification: NotificationSecond });
+      createTask({ bot, participant, challenge, program, notification: NotificationLast });
+    });
+  }, delay);
 }

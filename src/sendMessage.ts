@@ -1,6 +1,6 @@
 import type TelegramBot from "node-telegram-bot-api";
 import type { InlineKeyboardButton } from "node-telegram-bot-api";
-import { challenges } from "./data";
+import { getChatById } from "database/controllers/chat";
 
 function getMainText(potentialParticipants?: number) {
   if (potentialParticipants && potentialParticipants > 0) {
@@ -22,8 +22,8 @@ function getKeyboard(potentialParticipants?: number) {
   return START_PROGRAM_KEYBOARD;
 }
 
-export function startConfirmationMessage(bot: TelegramBot, chatId: number) {
-  const chat = challenges[chatId];
+export async function startConfirmationMessage(bot: TelegramBot, chatId: number) {
+  const chat = await getChatById(chatId!);
 
   if (!chat) {
     return;

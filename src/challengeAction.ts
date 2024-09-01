@@ -1,10 +1,10 @@
 import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
+import { Types } from "mongoose";
 import { CallbackData, Status } from "./types";
-import { challenges } from "./data";
 import { getProgram, getTimezoneKeyboard } from "./helpers";
-import { scheduleNotification } from "./reminder";
+import { scheduleNotification, stopAllNotification } from "./reminder";
 import { createChat, getChatById, updateChatById } from "database/controllers/chat";
-import { createChallenge } from "database/controllers/challenge";
+import { createChallenge, updateChallengeById, updateParticipant } from "database/controllers/challenge";
 
 type SetFirstProgram = {
   chatId: number;
@@ -41,6 +41,15 @@ const programInfoKeyboard: InlineKeyboardButton[][] = [
   [{ text: 'Стартуем', callback_data: CallbackData.StartVoting, }],
   [{ text: 'Назад', callback_data: CallbackData.BackToPrograms, }],
 ];
+
+function convertUserToParticipant(user: TelegramBot.User) {
+  return ({
+    ...user,
+    _id: new Types.ObjectId(),
+    penalty: 0,
+    activeDay: 1
+  });
+}
 
 export function getProgramInfo({ programId, chatId, bot, messageId, title }: SetProgramType) {
   const program = getProgram(programId);
@@ -109,37 +118,53 @@ export function chooseTimeZone(bot: TelegramBot, chatId: number) {
 
 export async function startChallenge(chatId: number, bot: TelegramBot) {
   const chat = await getChatById(chatId);
-  console.log('chat !!!', chat);
+  const challenge = chat?.activeChallenge;
+  const program = challenge && getProgram(challenge.programId);
 
-  const currentChallenge = challenges[chatId]?.activeChallenge;
-  const currentProgram = currentChallenge && getProgram(currentChallenge.programId);
-
-  if (currentChallenge && currentProgram) {
-    currentChallenge.status = Status.Active;
-    currentChallenge.participants = currentChallenge.usersIn.map((user) => ({...user, penalty: 0, activeDay: 1}));
-    currentChallenge.activeDay = 1;
-
+  if (challenge && program) {
     const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    currentChallenge.startDate = tomorrow;
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    await bot.sendMessage(
-      chatId,
-      `*Почти готово!* \nПриветсвуйте смельчаков: \n${currentChallenge.participants.map((user) => `@${user.username}`).join('\n')}\n`,
-      { parse_mode: 'Markdown' }
-    );
+    const challengeData = {
+      status: Status.Active,
+      participants: challenge.usersIn.map(convertUserToParticipant),
+      activeDay: 1,
+      startDate: tomorrow,
+      usersIn: [],
+    }
 
-    chooseTimeZone(bot, chatId);
+    const activeChallenge =  await updateChallengeById(challenge._id, challengeData);
+
+    if (activeChallenge) {
+      await bot.sendMessage(
+        chatId,
+        `*Почти готово!* \nПриветсвуйте смельчаков: \n${activeChallenge.participants.map((user) => `@${user.username}`).join('\n')}\n`,
+        { parse_mode: 'Markdown' }
+      );
+
+      chooseTimeZone(bot, chatId);
+    }
   }
 }
 
-export function cancelChallenge(chatId: number) {
-  const active = challenges[chatId]?.activeChallenge;
+export async function cancelChallenge(chatId: number) {
+  const chat = await getChatById(chatId);
+  const challenge = chat?.activeChallenge;
 
-  if (active) {
-    active.status = Status.Canceled;
-    challenges[chatId].archive.push(active);
-    challenges[chatId].activeChallenge = undefined;
+  console.log('cancelChallenge', challenge);
+
+
+  if (challenge) {
+    await updateChallengeById(challenge._id, {
+      status: Status.Canceled,
+    });
+
+    await updateChatById(chatId, {
+      activeChallenge: undefined,
+      archive: [...chat.archive, challenge],
+    });
+
+    stopAllNotification(challenge);
   }
 }
 
@@ -151,108 +176,124 @@ export async function preselectProgram(
   const chat = await getChatById(chatId);
 
   if (chat) {
-    const updatedChat = await updateChatById(chatId, { preselectedProgram: programId});
-    console.log('updatedChat', updatedChat);
+    await updateChatById(chatId, { preselectedProgram: programId});
   } else {
-    const chat = await createChat({ chatId, programId, title });
-    console.log('chat after create', chat);
+    await createChat({ chatId, programId, title });
   }
 }
 
 export async function setParticipantTimeZone({ chatId, callbackQuery, bot }: SetParticipantTimeZoneType) {
   const userId = callbackQuery.from.id;
   const timezone = callbackQuery.data?.replace(`${CallbackData.TimeZone}_`, '');
-  const challenge = challenges[chatId]?.activeChallenge;
-  const program = challenge && getProgram(challenge.programId);
+  const chat = await getChatById(chatId);
+  const challenge = chat?.activeChallenge;
 
   if (challenge) {
     const participant = challenge.participants.find((user) => user.id === userId);
 
     if (participant) {
-      participant.timezone = timezone;
+      const updated = await updateParticipant(challenge._id, participant._id, { timezone: timezone });
 
       await bot.sendMessage(chatId!,
         `@${callbackQuery?.from?.username}  Выбрал часовой пояс! - ${callbackQuery.data?.replace(`${CallbackData.TimeZone}_`, '')}`,
         { disable_notification: true },
       );
+
+
+
+      if (updated && updated.participants.every((user) => user.timezone)) {
+        const program = challenge && getProgram(challenge.programId);
+
+        await bot.sendMessage(chatId!,
+          `Все выбрали часовой пояс, соревнование началось!
+          Завтра первый день и задание будет такое: ${program?.schedule[0].exercise}`,
+          { disable_notification: true },
+        );
+
+        scheduleNotification(bot, updated);
+        bot.deleteMessage(chatId, callbackQuery.message?.message_id!);
+      }
     }
-  }
-
-  if (program && challenge && challenge.participants.every((user) => user.timezone)) {
-    await bot.sendMessage(chatId!,
-      `Все выбрали часовой пояс, соревнование началось!
-      Завтра первый день и задание будет такое: ${program.schedule[0].exercise}`,
-      { disable_notification: true },
-    );
-
-    scheduleNotification(bot, challenge);
-    bot.deleteMessage(chatId, callbackQuery.message?.message_id!);
   }
 }
 
-export function setDayDone(chatId: number, userId: number) {
-  const currentChallenge = challenges[chatId]?.activeChallenge;
-  const currentProgram = currentChallenge && getProgram(currentChallenge.programId);
+export async function setDayDone(chatId: number, userId: number) {
+  const chat = await getChatById(chatId);
+  const challenge = chat?.activeChallenge;
+  const currentProgram = challenge && getProgram(challenge.programId);
 
   if (currentProgram) {
-    const user = currentChallenge.participants.find((user) => user.id === userId);
+    const user = challenge.participants.find((user) => user.id === userId);
 
     if (user) {
       if (currentProgram.schedule.at(-1)?.day === user?.activeDay) {
-        user.activeDay = user.activeDay! + 1;
-        user.winner = true;
-        user.out = false;
-        user.outDateNumber = user.activeDay;
-        user.penalty = 0;
+        const updatedUser = {
+          activeDay: user.activeDay! + 1,
+          winner: true,
+          out: false,
+          outDateNumber: user.activeDay,
+          penalty: 0,
+        }
 
-        currentChallenge.winners.push(user);
-        currentChallenge.losers = currentChallenge.losers.filter((loser) => loser.id !== user.id);
+        await updateParticipant(challenge._id, user._id, updatedUser);
 
-        return;
+        const updated = await updateChallengeById(challenge._id, {
+          winners: [...challenge.winners, user],
+          losers: challenge.losers.filter((loser) => loser.id !== user.id),
+        });
+
+        return updated;
       }
 
-      user.activeDay = user.activeDay! + 1;
+      const updated = await updateParticipant(challenge._id, user._id, { activeDay: user.activeDay! + 1 });
+
+      return updated;
     }
   }
 }
 
-export function setNewDay(chatId: number): string | undefined {
-  const currentChallenge = challenges[chatId]?.activeChallenge;
-  const currentProgram = currentChallenge && getProgram(currentChallenge.programId);
+export async function setNewDay(chatId: number): Promise<string | undefined> {
+  const chat = await getChatById(chatId);
+  const challenge = chat?.activeChallenge;
+  const program = challenge && getProgram(challenge.programId);
 
-  if (currentChallenge) {
-    currentChallenge.activeDay = currentChallenge.activeDay! + 1;
+  if (challenge) {
+    const newDay = challenge.activeDay! + 1;
 
-    if (currentProgram) {
-      const nextExercise = currentProgram.schedule[currentChallenge.activeDay].exercise;
+    await updateChallengeById(challenge._id, { activeDay: newDay });
 
-      return nextExercise;
+    if (program) {
+      return program.schedule[newDay].exercise;
     }
   }
 }
 
-export function setParticipantPenalty(chatId: number, userId: number) {
-  const currentChallenge = challenges[chatId]?.activeChallenge;
+export async function setParticipantPenalty(chatId: number, userId: number) {
+  const chat = await getChatById(chatId);
+  const challenge = chat?.activeChallenge;
 
-  if (currentChallenge) {
-    const user = currentChallenge.participants.find((user) => user.id === userId);
+  if (challenge) {
+    const user = challenge.participants.find((user) => user.id === userId);
 
     if (user) {
-      user.penalty = 1;
+      await updateParticipant(challenge._id, user._id, { penalty: 1 });
     }
   }
 }
 
-export function setParticipantOut(chatId: number, userId: number) {
-  const currentChallenge = challenges[chatId]?.activeChallenge;
+export async function setParticipantOut(chatId: number, userId: number) {
+  const chat = await getChatById(chatId);
+  const challenge = chat?.activeChallenge;
 
-  if (currentChallenge) {
-    const user = currentChallenge.participants.find((user) => user.id === userId);
+  if (challenge) {
+    const user = challenge.participants.find((user) => user.id === userId);
 
     if (user) {
-      user.out = true;
-      user.winner = false;
-      user.outDateNumber = user.activeDay;
+      await updateParticipant(challenge._id, user._id, {
+         out: true,
+         winner: false,
+         outDateNumber: user.activeDay
+      });
     }
   }
 }

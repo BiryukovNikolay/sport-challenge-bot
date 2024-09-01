@@ -1,8 +1,8 @@
-import { Participant } from './../types';
 import TelegramBot from "node-telegram-bot-api";
-import { challenges } from "../data";
 import { getProgram, sendTemporaryMessage } from "../helpers";
 import { CallbackData } from "../types";
+import { getChatById } from 'database/controllers/chat';
+import { Participant } from "database/schemas/participant";
 
 function getKeyboard(userId: number) {
   return [
@@ -11,11 +11,12 @@ function getKeyboard(userId: number) {
   ];
 }
 
-export function onCheckMe(msg: TelegramBot.Message, bot: TelegramBot) {
+export async function onCheckMe(msg: TelegramBot.Message, bot: TelegramBot) {
   const chatId = msg.chat.id;
   const username = msg.from?.username;
   const userId = msg.from?.id;
-  const activeChallenge = challenges[chatId]?.activeChallenge;
+  const chat = await getChatById(chatId);
+  const activeChallenge = chat?.activeChallenge;
 
   if (activeChallenge) {
     const participant = activeChallenge.participants.find((user: Participant) => user.id === userId);

@@ -1,8 +1,10 @@
 import TelegramBot from "node-telegram-bot-api";
 import crone from "node-cron";
-import { ChallengeType, Participant, ProgramType } from "./types";
+import { ProgramType } from "./types";
 import { getProgram } from "./helpers";
 import { setParticipantOut, setParticipantPenalty } from "./challengeAction";
+import { Participant } from "database/schemas/participant";
+import { ChallengeType } from "database/models/challenge";
 
 type NotificationType = {
   time: string;
@@ -18,6 +20,14 @@ type CreateTaskType = {
   program: ProgramType;
   notification: NotificationType;
 }
+
+const TIME = {
+  FIRST: '20:00',
+  SECOND: '23:00',
+  LAST: '00:00',
+};
+
+const TIMES = Object.values(TIME);
 
 const NotificationFirst: NotificationType = {
   time: '20:00',
@@ -56,11 +66,14 @@ function createTask({ bot, participant, challenge, program, notification}: Creat
   const { timezone, penalty, out, winner, username, activeDay: userDay} = participant;
   const lastDay = program.schedule[program.schedule.length - 1].day;
 
-  const task = crone.schedule(getCroneExpression(time), () => {
+  const task: crone.ScheduledTask = crone.schedule(getCroneExpression(time), () => {
     if (out || winner || lastDay < activeDay!) {
       task.stop();
       return;
     }
+
+    console.log();
+
 
     if (userDay > activeDay!) {
       return;
@@ -98,6 +111,7 @@ function createTask({ bot, participant, challenge, program, notification}: Creat
   }, {
     scheduled: true,
     timezone: timezone,
+    name: `notification_${participant._id.toString()}_${time}`,
   });
 }
 
@@ -116,5 +130,23 @@ export function scheduleNotification(bot: TelegramBot, challenge: ChallengeType)
       createTask({ bot, participant, challenge, program, notification: NotificationSecond });
       createTask({ bot, participant, challenge, program, notification: NotificationLast });
     });
+
   }, delay);
+}
+
+export function stopNotification(participantId: string) {
+  const tasks = crone.getTasks();
+
+  TIMES.forEach((time) => {
+    const currentTask = tasks.get(`notification_${participantId}_${time}`);
+    if (currentTask) {
+      currentTask.stop();
+    }
+  });
+}
+
+export function stopAllNotification(challenge: ChallengeType) {
+  challenge.participants.forEach((participant) => {
+    stopNotification(participant._id.toString());
+  });
 }

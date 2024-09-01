@@ -1,7 +1,8 @@
 import type TelegramBot from 'node-telegram-bot-api';
 import mongoose, { Schema } from 'mongoose';
 import { Status } from 'src/types';
-import { Participant } from './participant';
+import { Participant } from 'database/schemas/participant';
+import { ParticipantSchema } from 'database/schemas/participant';
 
 export type ChallengeType = {
   key: string;
@@ -13,7 +14,7 @@ export type ChallengeType = {
   usersIn: TelegramBot.User[];
   userOut: TelegramBot.User[];
   status: Status;
-   activeDay?: number;
+  activeDay?: number;
   startDate?: Date;
 };
 
@@ -21,9 +22,9 @@ const ChallengeSchema: Schema = new Schema({
   key: { type: String, required: true },
   chatId: { type: Number, required: true },
   programId: { type: String, required: true },
-  participants: [{ type: Schema.Types.ObjectId, ref: 'Participant' }],
-  winners: [{ type: Schema.Types.ObjectId, ref: 'Participant' }],
-  losers: [{ type: Schema.Types.ObjectId, ref: 'Participant' }],
+  participants: [ParticipantSchema],
+  winners: [ParticipantSchema],
+  losers: [ParticipantSchema],
   usersIn: [{ type: Object }],
   userOut: [{ type: Object }],
   status: { type: String, required: true },

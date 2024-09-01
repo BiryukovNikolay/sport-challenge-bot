@@ -1,7 +1,8 @@
 import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
-import { programs, challenges } from "../data";
+import { programs } from "../data";
 import { Status } from "../types";
 import { startConfirmationMessage } from "../sendMessage";
+import { getChatById } from "database/controllers/chat";
 
 const PROGRESS_PROGRAM_KEYBOARD: InlineKeyboardButton[][] = [
   [{text: 'Отменить программу', callback_data: 'cancel_program'}],
@@ -12,10 +13,11 @@ const PROGRAMS_KEYBOARD: InlineKeyboardButton[][] = programs.map(
   (program) => [{ text: program.title, callback_data: `chosen_program_${program.id}` }]
 );
 
-export function onStart(msg: TelegramBot.Message, bot: TelegramBot) {
+export async function onStart(msg: TelegramBot.Message, bot: TelegramBot) {
   const chatId = msg.chat.id;
   const messageId = msg.message_id;
-  const challenge = challenges[chatId]?.activeChallenge;
+  const chat = await getChatById(chatId);
+  const challenge = chat?.activeChallenge;
 
   if (challenge) {
     const { status } = challenge;

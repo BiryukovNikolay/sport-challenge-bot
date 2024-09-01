@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
-import { CallbackData, ChallengeType } from "./types";
+import { CallbackData } from "./types";
 import { voteChallengeAccepted, voteChallengeDeclined } from "./vote";
-import { programs, challenges } from "./data";
+import { programs } from "./data";
 import {
   cancelChallenge,
   getProgramInfo,
@@ -15,7 +15,6 @@ export function setCallbackQueryListener(bot: TelegramBot) {
   bot.on('callback_query', async (callbackQuery) => {
     const message = callbackQuery.message;
     const chatId = message?.chat.id;
-    // const challenge =  (chatId && challenges[chatId]?.activeChallenge) as ChallengeType;
 
     if (callbackQuery.data?.startsWith('chosen_program_')) {
       const programId = callbackQuery.data.replace('chosen_program_', '');

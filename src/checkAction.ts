@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
-import { CallbackData, ChallengeType } from "./types";
+import { CallbackData } from "./types";
 import { setDayDone, setNewDay } from "./challengeAction";
-import { challenges } from "./data";
+import { getChatById } from "database/controllers/chat";
 
 type DoneActionType = {
   type: CallbackData.UserDone | CallbackData.UserNotDone;
@@ -23,10 +23,11 @@ function getMessageText({ type, refereeName, participantName }: GetMessageType) 
   return `@${refereeName} забраковал этот подход. @${participantName} придется повторить сегодняшнее задание, Соберись!`;
 }
 
-export function checkAction({ bot, callbackQuery, type }: DoneActionType) {
+export async function checkAction({ bot, callbackQuery, type }: DoneActionType) {
   const message = callbackQuery.message;
-  const chatId = message?.chat.id;
-  const challenge =  (chatId && challenges[chatId]?.activeChallenge) as ChallengeType;
+  const chatId =  message?.chat.id;
+  const chat = await getChatById(chatId!);
+  const challenge = chat?.activeChallenge;
   const participantId = callbackQuery.data?.replace(`${type}_`, '');
   const referee = callbackQuery.from;
 
@@ -58,11 +59,11 @@ export function checkAction({ bot, callbackQuery, type }: DoneActionType) {
     );
 
     if (type === CallbackData.UserDone) {
-      setDayDone(chatId!, participant.id!);
-      const isEveryOneDone = challenge?.participants.every((user) => user.activeDay! > challenge.activeDay!);
+      const updated = await setDayDone(chatId!, participant.id!);
+      const isEveryOneDone = updated?.participants.every((user) => user.activeDay! > updated.activeDay!);
 
       if (isEveryOneDone) {
-        const nextExercise = setNewDay(chatId!);
+        const nextExercise = await setNewDay(chatId!);
 
         bot.sendMessage(
           chatId!,

@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import { Status } from "./types";
-import { getChatById, updateChatById } from "database/controllers/chat";
+import { getChatById } from "database/controllers/chat";
 import { updateChallengeById } from "database/controllers/challenge";
 
 type VoteType = {

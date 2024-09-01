@@ -1,7 +1,7 @@
-import { ChallengeType } from './../../types';
 import { Chat, ChatType } from "database/models/chat";
 import { errorBoundary } from "./helpers";
-import { ObjectId, Types } from 'mongoose';
+import { Types } from 'mongoose';
+import { ChallengeType } from "database/models/challenge";
 
 type CreateChatType = {
   chatId: number;

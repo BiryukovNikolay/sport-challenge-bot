@@ -1,19 +1,20 @@
 import TelegramBot from "node-telegram-bot-api";
-import { challenges } from "../data";
 import { getProgram, sendTemporaryMessage } from "../helpers";
+import { getChatById } from "database/controllers/chat";
 
-export function onRules(msg: TelegramBot.Message, bot: TelegramBot) {
+export async function onRules(msg: TelegramBot.Message, bot: TelegramBot) {
   const chatId = msg.chat.id;
-  const activeChallenge = challenges[chatId]?.activeChallenge;
+  const chat = await getChatById(chatId);
+  const challenge = chat?.activeChallenge;
 
-  if (activeChallenge) {
-    const currentProgram = getProgram(activeChallenge.programId);
+  if (challenge) {
+    const program = getProgram(challenge.programId);
 
-    if (currentProgram) {
+    if (program) {
       sendTemporaryMessage({
         bot,
         chatId,
-        text: currentProgram.rules,
+        text: program.rules,
         delay: 60000
       })
 
@@ -21,5 +22,5 @@ export function onRules(msg: TelegramBot.Message, bot: TelegramBot) {
     }
   }
 
-  bot.sendMessage(msg.chat.id, "У вас нет активной программы, что бы начать программу введите команду /start");
+  bot.sendMessage(chatId, "У вас нет активной программы, что бы начать программу введите команду /start");
 }

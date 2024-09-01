@@ -1,14 +1,10 @@
 import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
-import { CallbackData, Participant, Status } from "./types";
+import { CallbackData, Status } from "./types";
 import { challenges } from "./data";
-import { getKey, getProgram, getTimezoneKeyboard } from "./helpers";
+import { getProgram, getTimezoneKeyboard } from "./helpers";
 import { scheduleNotification } from "./reminder";
-
-type CreateChallengeType = {
-  chatId: number;
-  status: Status;
-  participants: Participant[];
-}
+import { createChat, getChatById, updateChatById } from "database/controllers/chat";
+import { createChallenge } from "database/controllers/challenge";
 
 type SetFirstProgram = {
   chatId: number;
@@ -25,6 +21,7 @@ type SetProgramType = {
   bot: TelegramBot;
   programId: string;
   chatId: number;
+  title: string;
   messageId?: number;
 }
 
@@ -45,11 +42,11 @@ const programInfoKeyboard: InlineKeyboardButton[][] = [
   [{ text: 'Назад', callback_data: CallbackData.BackToPrograms, }],
 ];
 
-export function getProgramInfo({ programId, chatId, bot, messageId}: SetProgramType) {
+export function getProgramInfo({ programId, chatId, bot, messageId, title }: SetProgramType) {
   const program = getProgram(programId);
 
   if (program && messageId) {
-    preselectProgram(chatId!, programId);
+    preselectProgram(chatId!, programId, title);
 
     bot.editMessageText(
       `${program.title}
@@ -66,43 +63,37 @@ export function getProgramInfo({ programId, chatId, bot, messageId}: SetProgramT
   }
 }
 
-export function createChallenge({chatId, status, participants}: CreateChallengeType) {
-  const chat = challenges[chatId];
-
-  if (chat && chat.preselectedProgram) {
-    chat.activeChallenge = {
-      key: getKey(),
-      programId: chat.preselectedProgram,
-      chatId,
-      participants: participants,
-      status,
-      ...INITIAL_CHALLENGE
-    };
-    chat.preselectedProgram = undefined;
-  }
-}
-
-export function setFirstProgram({ chatId, bot}: SetFirstProgram) {
-  const chat = challenges[chatId];
+export async function setFirstProgram({ chatId, bot}: SetFirstProgram) {
+  const chat = await getChatById(chatId);
   const program = chat && chat.preselectedProgram && getProgram(chat.preselectedProgram);
 
   if (program) {
-    createChallenge({
-      chatId: chatId!,
+    const challenge = await createChallenge({
+      chatId,
       status: Status.Vote,
-      participants: [],
-    })
+      programId: program.id
+    });
 
-    bot.sendMessage(chatId!,
-      `Вы выбрали программу: *${program.title}!*\nКто готов учавствовать?\nКак только все участники проголосуют, введите команду /startprogram`,
-      {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: START_PROGRAM_KEYBOARD,
-          selective: true,
-        }
+    if (challenge) {
+      const updatedChat = await updateChatById(chatId, {
+        preselectedProgram: undefined,
+        activeChallenge: challenge._id
+      });
+
+      if(updatedChat) {
+        bot.sendMessage(chatId!,
+          `Вы выбрали программу: *${program.title}!*\nКто готов учавствовать?\nКак только все участники проголосуют, введите команду /startprogram`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: START_PROGRAM_KEYBOARD,
+              selective: true,
+            }
+          }
+        );
       }
-    );
+    }
+
   }
 }
 
@@ -117,6 +108,9 @@ export function chooseTimeZone(bot: TelegramBot, chatId: number) {
 }
 
 export async function startChallenge(chatId: number, bot: TelegramBot) {
+  const chat = await getChatById(chatId);
+  console.log('chat !!!', chat);
+
   const currentChallenge = challenges[chatId]?.activeChallenge;
   const currentProgram = currentChallenge && getProgram(currentChallenge.programId);
 
@@ -149,17 +143,19 @@ export function cancelChallenge(chatId: number) {
   }
 }
 
-export function preselectProgram(chatId: number, programId: string) {
-  const chat = challenges[chatId];
+export async function preselectProgram(
+  chatId: number,
+  programId: string,
+  title: string = ''
+) {
+  const chat = await getChatById(chatId);
 
   if (chat) {
-    chat.preselectedProgram = programId;
+    const updatedChat = await updateChatById(chatId, { preselectedProgram: programId});
+    console.log('updatedChat', updatedChat);
   } else {
-    challenges[chatId] = {
-      id: chatId,
-      archive: [],
-      preselectedProgram: programId,
-    };
+    const chat = await createChat({ chatId, programId, title });
+    console.log('chat after create', chat);
   }
 }
 

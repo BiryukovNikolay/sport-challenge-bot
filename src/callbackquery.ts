@@ -15,11 +15,17 @@ export function setCallbackQueryListener(bot: TelegramBot) {
   bot.on('callback_query', async (callbackQuery) => {
     const message = callbackQuery.message;
     const chatId = message?.chat.id;
-    const challenge =  (chatId && challenges[chatId]?.activeChallenge) as ChallengeType;
+    // const challenge =  (chatId && challenges[chatId]?.activeChallenge) as ChallengeType;
 
     if (callbackQuery.data?.startsWith('chosen_program_')) {
       const programId = callbackQuery.data.replace('chosen_program_', '');
-      getProgramInfo({ programId, messageId: message?.message_id, bot, chatId: chatId! });
+      getProgramInfo({
+        programId,
+        messageId: message?.message_id,
+        bot,
+        chatId: chatId!,
+        title: message?.chat.title!
+      });
     }
 
     if (callbackQuery.data === CallbackData.BackToPrograms) {
@@ -40,15 +46,15 @@ export function setCallbackQueryListener(bot: TelegramBot) {
     }
 
     if (callbackQuery.data === CallbackData.ChallengeAccepted) {
-      if (challenge && chatId) {
-        voteChallengeAccepted({ bot, challenge, callbackQuery, chatId });
+      if (chatId) {
+        voteChallengeAccepted({ bot, callbackQuery, chatId });
         return;
       }
     }
 
     if (callbackQuery.data === CallbackData.ChallengeDeclined) {
-      if (challenge && chatId) {
-        voteChallengeDeclined({ bot, challenge, callbackQuery, chatId });
+      if (chatId) {
+        voteChallengeDeclined({ bot, callbackQuery, chatId });
       }
     }
 

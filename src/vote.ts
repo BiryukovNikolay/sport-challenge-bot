@@ -1,35 +1,49 @@
 import TelegramBot from "node-telegram-bot-api";
-import { ChallengeType, Status } from "./types";
+import { Status } from "./types";
+import { getChatById, updateChatById } from "database/controllers/chat";
+import { updateChallengeById } from "database/controllers/challenge";
 
 type VoteType = {
   bot: TelegramBot;
-  challenge: ChallengeType;
   callbackQuery: TelegramBot.CallbackQuery;
   chatId: number;
 }
 
-export function voteChallengeDeclined({ bot, challenge, callbackQuery, chatId }: VoteType) {
-  const declinedUser = challenge.userOut.find((user) => user.id === callbackQuery.from.id);
-  const index = challenge.usersIn.findIndex((user) => user.id === callbackQuery.from.id);
+async function getChallenge(chatId: number) {
+  const chat = await getChatById(chatId);
+  return chat?.activeChallenge;
+}
 
-  if (challenge.status !== Status.Vote) {
-    bot.answerCallbackQuery(callbackQuery.id, { text: 'Поздняк, соревнование уже идет' })
-    bot.deleteMessage(chatId!, callbackQuery.message?.message_id!);
+function sendStartedChallengeMessage(bot: TelegramBot, chatId: number, callbackQuery: TelegramBot.CallbackQuery) {
+  bot.answerCallbackQuery(callbackQuery.id, { text: 'Поздняк, соревнование уже идет' })
+  bot.deleteMessage(chatId!, callbackQuery.message?.message_id!);
+}
 
+export async function voteChallengeDeclined({ bot, callbackQuery, chatId }: VoteType) {
+  const challenge = await getChallenge(chatId);
+
+  if (!challenge) {
     return;
   }
 
+  if (challenge.status !== Status.Vote) {
+    sendStartedChallengeMessage(bot, chatId, callbackQuery);
+    return;
+  }
+
+  const declinedUser = challenge.userOut.find((user) => user.id === callbackQuery.from.id);
+  const acceptedUser = challenge.usersIn.find((user) => user.id === callbackQuery.from.id);
+
   if (!declinedUser) {
-    challenge.userOut.push(callbackQuery.from);
+    const newOut = { userOut: [...challenge.userOut, callbackQuery.from] };
+    const newIn = { usersIn: challenge.usersIn.filter((user) => user !== acceptedUser) };
+
+    await updateChallengeById(challenge._id, { ...newOut, ...newIn });
 
     bot.sendMessage(chatId!,
       `@${callbackQuery?.from?.username}  Соскочил!`,
       { disable_notification: true },
     );
-
-    if (index !== -1) {
-      challenge.usersIn.splice(index, 1);
-    }
 
     bot.answerCallbackQuery(callbackQuery.id, { text: 'Фууу, слабак!' });
 
@@ -40,28 +54,31 @@ export function voteChallengeDeclined({ bot, challenge, callbackQuery, chatId }:
 }
 
 
-export function voteChallengeAccepted({ bot, challenge, callbackQuery, chatId }: VoteType) {
-  const activeUser = challenge.usersIn.find((user) => user.id === callbackQuery.from.id);
-  const declinedUserIndex = challenge.userOut.findIndex((user) => user.id === callbackQuery.from.id);
+export async function voteChallengeAccepted({ bot, callbackQuery, chatId }: VoteType) {
+  const challenge = await getChallenge(chatId);
 
-  if (challenge.status !== Status.Vote) {
-    bot.answerCallbackQuery(callbackQuery.id, { text: 'Поздняк, соревнование уже идет' })
-    bot.deleteMessage(chatId!, callbackQuery.message?.message_id!);
-
+  if (!challenge) {
     return;
   }
 
+  if (challenge.status !== Status.Vote) {
+    sendStartedChallengeMessage(bot, chatId, callbackQuery);
+    return;
+  }
+
+  const activeUser = challenge.usersIn.find((user) => user.id === callbackQuery.from.id);
+  const declinedUser = challenge.userOut.find((user) => user.id === callbackQuery.from.id);
+
   if (!activeUser) {
-    challenge.usersIn.push(callbackQuery.from);
+    const newIn = { usersIn: [...challenge.usersIn, callbackQuery.from] };
+    const newOut = { userOut: challenge.userOut.filter((user) => declinedUser !== user) };
+
+    await updateChallengeById(challenge._id, { ...newIn, ...newOut });
 
     bot.sendMessage(chatId!,
       `@${callbackQuery?.from?.username}  Принял вызов!`,
       { disable_notification: true },
     );
-
-    if (declinedUserIndex !== -1) {
-      challenge.userOut.splice(declinedUserIndex, 1);
-    }
 
     bot.answerCallbackQuery(callbackQuery.id, { text: 'Супер, Удачи!' });
 

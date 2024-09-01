@@ -12,17 +12,23 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/mongoose": "^5.11.97",
     "@types/node": "^22.4.0",
+    "@types/node-cron": "^3.0.11",
     "@types/node-telegram-bot-api": "^0.64.7",
     "dotenv": "^16.4.5",
+    "module-alias": "^2.2.3",
     "moment-timezone": "^0.5.45",
+    "mongoose": "^8.6.0",
     "nanoid": "^5.0.7",
     "node-cron": "^3.0.3",
     "node-telegram-bot-api": "^0.66.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   },
-  "devDependencies": {
-    "@types/node-cron": "^3.0.11"
+  "_moduleAliases": {
+    "database": "src/database",
+    "data": "src/data",
+    "src": "src"
   }
 }
